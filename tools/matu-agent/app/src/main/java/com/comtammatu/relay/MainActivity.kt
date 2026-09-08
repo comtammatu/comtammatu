@@ -88,6 +88,8 @@ class MainActivity : AppCompatActivity() {
         private const val DESTINATION_RECEIPTS = 101
         private const val DESTINATION_DEVICE = 102
         private const val DESTINATION_LOGS = 103
+        private const val LOG_REFRESH_DEBOUNCE_MS = 250L
+        private const val PORT_POLL_MS = 5_000L
     }
 
     private lateinit var etBackendUrl: EditText
@@ -130,20 +132,37 @@ class MainActivity : AppCompatActivity() {
     private lateinit var dbHelper: OrderQueueDbHelper
     private lateinit var dispatcher: WebhookDispatcher
     private var startAfterNotificationPermission = false
-    private var uiRefreshQueued = false
+    private var logRefreshQueued = false
+    private var portPollScheduled = false
     private val uiHandler = Handler(Looper.getMainLooper())
-    private val uiRefreshRunnable = Runnable {
-        uiRefreshQueued = false
-        if (currentDestination == DESTINATION_LOGS && ::tvLogs.isInitialized) {
-            updateLogsView()
+    private val logRefreshRunnable = Runnable {
+        logRefreshQueued = false
+        when (currentDestination) {
+            DESTINATION_LOGS -> if (::tvLogs.isInitialized) updateLogsView()
+            DESTINATION_RECEIPTS -> renderOrderList()
+            DESTINATION_OVERVIEW -> {
+                refreshQueueKpis()
+                refreshPortStatus()
+                refreshMarketplaceStatus()
+            }
+            else -> Unit
         }
-        refreshServiceState()
+    }
+    private val portPollRunnable = object : Runnable {
+        override fun run() {
+            portPollScheduled = false
+            if (currentDestination != DESTINATION_OVERVIEW) return
+            refreshPortStatus()
+            refreshQueueKpis()
+            refreshMarketplaceStatus()
+            schedulePortPoll()
+        }
     }
 
     private val logListener = { _: String ->
-        if (!uiRefreshQueued) {
-            uiRefreshQueued = true
-            uiHandler.postDelayed(uiRefreshRunnable, 250)
+        if (!logRefreshQueued) {
+            logRefreshQueued = true
+            uiHandler.postDelayed(logRefreshRunnable, LOG_REFRESH_DEBOUNCE_MS)
         }
     }
 
@@ -185,7 +204,6 @@ class MainActivity : AppCompatActivity() {
         })
 
         AppLogger.i("GIAO DIỆN", "Khởi động Má Tư Agent")
-        updateLogsView()
         refreshServiceState()
         handleOperationalAction(intent)
     }
@@ -213,20 +231,30 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         AppLogger.addListener(logListener)
-        updateLogsView()
         refreshServiceState()
-        uiHandler.post(uiRefreshRunnable)
+        when (currentDestination) {
+            DESTINATION_OVERVIEW -> {
+                refreshPortStatus()
+                refreshQueueKpis()
+                refreshMarketplaceStatus()
+                schedulePortPoll()
+            }
+            DESTINATION_RECEIPTS -> renderOrderList()
+            DESTINATION_LOGS -> if (::tvLogs.isInitialized) updateLogsView()
+        }
     }
 
     override fun onStop() {
         super.onStop()
         AppLogger.removeListener(logListener)
-        uiHandler.removeCallbacks(uiRefreshRunnable)
-        uiRefreshQueued = false
+        cancelPortPoll()
+        uiHandler.removeCallbacks(logRefreshRunnable)
+        logRefreshQueued = false
     }
 
     override fun onDestroy() {
-        uiHandler.removeCallbacks(uiRefreshRunnable)
+        cancelPortPoll()
+        uiHandler.removeCallbacks(logRefreshRunnable)
         activityScope.cancel()
         dbHelper.close()
         super.onDestroy()
@@ -378,20 +406,32 @@ class MainActivity : AppCompatActivity() {
             DESTINATION_RECEIPTS -> {
                 toolbar.title = getString(R.string.orders_title)
                 toolbar.subtitle = getString(R.string.receipt_layers_subtitle)
+                cancelPortPoll()
                 renderOrderList()
             }
             DESTINATION_DEVICE -> {
                 toolbar.title = getString(R.string.nav_device)
                 toolbar.subtitle = getString(R.string.device_subtitle)
+                cancelPortPoll()
             }
             DESTINATION_LOGS -> {
                 toolbar.title = getString(R.string.logs_title)
                 toolbar.subtitle = getString(R.string.logs_nav_subtitle)
+                cancelPortPoll()
                 updateLogsView()
+            }
+            DESTINATION_OVERVIEW -> {
+                toolbar.title = getString(R.string.app_name)
+                toolbar.subtitle = getString(R.string.brand_subtitle)
+                refreshPortStatus()
+                refreshQueueKpis()
+                refreshMarketplaceStatus()
+                schedulePortPoll()
             }
             else -> {
                 toolbar.title = getString(R.string.app_name)
                 toolbar.subtitle = getString(R.string.brand_subtitle)
+                cancelPortPoll()
             }
         }
         applyingProgrammaticSelection = true
@@ -1859,8 +1899,11 @@ class MainActivity : AppCompatActivity() {
         return when (event.kind) {
             IntakeConnectionKind.MARKETPLACE_JOB ->
                 getString(R.string.marketplace_connection_job, clock, event.remoteHost)
-            else ->
+            IntakeConnectionKind.MARKETPLACE_PROBE ->
                 getString(R.string.marketplace_connection_probe, clock, event.remoteHost)
+            IntakeConnectionKind.SELF_CHECK,
+            IntakeConnectionKind.INBOUND_IDLE ->
+                getString(R.string.marketplace_connection_empty)
         }
     }
 
@@ -1887,77 +1930,116 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, copy, Toast.LENGTH_LONG).show()
     }
 
+    private fun agentEnabled(): Boolean =
+        getSharedPreferences(PrintIntakeService.PREFS_NAME, MODE_PRIVATE)
+            .getBoolean(PrintIntakeService.KEY_AGENT_ENABLED, false)
+
+    private fun currentPortStatus(): PrinterPortStatus {
+        val health = PrinterHealth.snapshot()
+        return PrinterPortStatusPolicy.resolve(
+            agentEnabled = agentEnabled(),
+            serviceRunning = PrintIntakeService.isServiceRunning,
+            listening = health.listening,
+            lastProbeOk = health.lastProbeOk
+        )
+    }
+
+    private fun schedulePortPoll() {
+        if (portPollScheduled || currentDestination != DESTINATION_OVERVIEW) return
+        portPollScheduled = true
+        uiHandler.postDelayed(portPollRunnable, PORT_POLL_MS)
+    }
+
+    private fun cancelPortPoll() {
+        uiHandler.removeCallbacks(portPollRunnable)
+        portPollScheduled = false
+    }
+
     private fun refreshServiceState() {
+        if (!::tvEndpoint.isInitialized || !::btnToggle.isInitialized) return
         val port = etPort.text.toString().toIntOrNull() ?: PrintIntakeService.DEFAULT_PORT
         val branchId = etBranchId.text.toString().toIntOrNull() ?: 0
         val lanMode = cbLanMode.isChecked
         tvEndpoint.text = endpointSummary(port, branchId, lanMode)
+        refreshQueueKpis()
+        refreshMarketplaceStatus()
+        refreshPortStatus()
+    }
 
-        val resolvedCount = dbHelper.getResolvedCount()
+    private fun refreshQueueKpis() {
+        if (!::tvActionKpi.isInitialized) return
         val actionNeeded = dbHelper.getActionNeededCount()
-
-        if (::tvActionKpi.isInitialized) {
-            tvActionKpi.text = actionNeeded.toString()
-            tvActionKpi.setTextColor(
-                color(if (actionNeeded > 0) R.color.warning_text else R.color.ink_muted)
-            )
-        }
+        tvActionKpi.text = actionNeeded.toString()
+        tvActionKpi.setTextColor(
+            color(if (actionNeeded > 0) R.color.warning_text else R.color.ink_muted)
+        )
         if (::tvWaitingKpi.isInitialized) {
             tvWaitingKpi.text = dbHelper.getInFlightCount().toString()
         }
         if (::tvSentKpi.isInitialized) {
-            tvSentKpi.text = resolvedCount.toString()
+            tvSentKpi.text = dbHelper.getResolvedCount().toString()
         }
         updateReceiptsBadge(actionNeeded)
-        if (currentDestination == DESTINATION_RECEIPTS) {
-            renderOrderList()
-        }
-        refreshMarketplaceStatus()
-        refreshPrinterHealth(port)
-
-        if (PrintIntakeService.isServiceRunning) {
-            btnToggle.text = getString(R.string.stop_service_action)
-            stylePrimaryButton(btnToggle, destructive = true)
-            tvStatusTitle.text = getString(R.string.service_running_title)
-            tvStatus.text = getString(R.string.service_running_description)
-            tvStatusBadge.text = getString(R.string.status_running)
-            tvStatusBadge.setTextColor(color(R.color.success_text))
-            tvStatusBadge.background = roundedBackground(
-                color(R.color.success_surface),
-                color(R.color.success_border),
-                50
-            )
-            statusDot.background = circleBackground(color(R.color.success))
-        } else {
-            btnToggle.text = getString(R.string.start_service_action)
-            stylePrimaryButton(btnToggle, destructive = false)
-            tvStatusTitle.text = getString(R.string.service_stopped_title)
-            tvStatus.text = getString(R.string.service_stopped_description)
-            tvStatusBadge.text = getString(R.string.status_stopped)
-            tvStatusBadge.setTextColor(color(R.color.neutral_text))
-            tvStatusBadge.background = roundedBackground(
-                color(R.color.neutral_surface),
-                color(R.color.neutral_border),
-                50
-            )
-            statusDot.background = circleBackground(color(R.color.ink_muted))
-        }
     }
 
-    private fun refreshPrinterHealth(port: Int) {
-        if (!::tvPrinterHealth.isInitialized) return
+    private fun refreshPortStatus() {
+        if (!::tvStatusTitle.isInitialized) return
+        val port = etPort.text.toString().toIntOrNull() ?: PrintIntakeService.DEFAULT_PORT
+        val status = currentPortStatus()
         val health = PrinterHealth.snapshot()
-        val live = PrintIntakeService.isServiceRunning &&
-            (health.listening || PrinterWatchdogPolicy.isFresh(health.lastOkAtMs, System.currentTimeMillis()))
-        if (live) {
-            tvPrinterHealth.text = getString(R.string.printer_health_live, port)
-            tvPrinterHealth.setTextColor(color(R.color.success_text))
-        } else if (PrintIntakeService.isServiceRunning) {
-            tvPrinterHealth.text = getString(R.string.printer_health_recovering, port)
-            tvPrinterHealth.setTextColor(color(R.color.warning_text))
-        } else {
-            tvPrinterHealth.text = getString(R.string.printer_health_down)
-            tvPrinterHealth.setTextColor(color(R.color.ink_muted))
+        when (status) {
+            PrinterPortStatus.OPEN -> {
+                btnToggle.text = getString(R.string.stop_service_action)
+                stylePrimaryButton(btnToggle, destructive = true)
+                tvStatusTitle.text = getString(R.string.service_running_title)
+                tvStatus.text = getString(R.string.service_running_description, port)
+                tvStatusBadge.text = getString(R.string.status_running)
+                tvStatusBadge.setTextColor(color(R.color.success_text))
+                tvStatusBadge.background = roundedBackground(
+                    color(R.color.success_surface),
+                    color(R.color.success_border),
+                    50
+                )
+                statusDot.background = circleBackground(color(R.color.success))
+                tvPrinterHealth.text = getString(R.string.printer_health_live, port)
+                tvPrinterHealth.setTextColor(color(R.color.success_text))
+            }
+            PrinterPortStatus.RECOVERING -> {
+                btnToggle.text = getString(R.string.stop_service_action)
+                stylePrimaryButton(btnToggle, destructive = true)
+                tvStatusTitle.text = getString(R.string.service_recovering_title)
+                tvStatus.text = getString(R.string.service_recovering_description, port)
+                tvStatusBadge.text = getString(R.string.status_recovering)
+                tvStatusBadge.setTextColor(color(R.color.warning_text))
+                tvStatusBadge.background = roundedBackground(
+                    color(R.color.warning_surface),
+                    color(R.color.warning_border),
+                    50
+                )
+                statusDot.background = circleBackground(color(R.color.warning))
+                tvPrinterHealth.text = getString(R.string.printer_health_recovering, port)
+                tvPrinterHealth.setTextColor(color(R.color.warning_text))
+            }
+            PrinterPortStatus.STOPPED -> {
+                btnToggle.text = getString(R.string.start_service_action)
+                stylePrimaryButton(btnToggle, destructive = false)
+                tvStatusTitle.text = getString(R.string.service_stopped_title)
+                tvStatus.text = getString(R.string.service_stopped_description)
+                tvStatusBadge.text = getString(R.string.status_stopped)
+                tvStatusBadge.setTextColor(color(R.color.neutral_text))
+                tvStatusBadge.background = roundedBackground(
+                    color(R.color.neutral_surface),
+                    color(R.color.neutral_border),
+                    50
+                )
+                statusDot.background = circleBackground(color(R.color.ink_muted))
+                tvPrinterHealth.text = getString(R.string.printer_health_down)
+                tvPrinterHealth.setTextColor(color(R.color.ink_muted))
+            }
+        }
+        if (health.lastOkAtMs > 0L) {
+            val checked = IntakeConnectionPolicy.formatClock(health.lastOkAtMs)
+            tvPrinterHealth.append("\n${getString(R.string.printer_port_checked_at, checked)}")
         }
     }
 

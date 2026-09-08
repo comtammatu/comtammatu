@@ -48,6 +48,7 @@ object PrinterWatchdogPolicy {
     const val PROBE_TIMEOUT_MS = 1_200
     const val STALE_MS = 45_000L
 
+    /** False when the cashier stopped intake; the 15s loop must not rebind. */
     fun shouldRebind(agentEnabled: Boolean, probeOk: Boolean, listening: Boolean): Boolean =
         agentEnabled && (!probeOk || !listening)
 

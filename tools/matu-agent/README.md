@@ -57,15 +57,17 @@ Never remove the system-owned printer service from a real SUNMI terminal.
 Configure ShopeeFood to use `127.0.0.1:9100` when it runs on the same Android
 device. Use the Agent device's Wi-Fi IP only when LAN mode is enabled.
 
-Agent 1.7.3 uses one long-running `specialUse` foreground service for the
+Agent 1.7.4 uses one long-running `specialUse` foreground service for the
 cashier-enabled intake socket. When left enabled, it restarts after boot or APK
-replacement, probes `127.0.0.1:9100` every 15s and rebinds if the printer IP
-goes silent, keeps a partial wake lock while the socket is live, holds each
+replacement, probes `127.0.0.1:9100` every 15s and rebinds if the listen port
+does not accept a connection. That probe proves the local listener only — not
+that ShopeeFood is connected. Overview shows port status as open, recovering,
+or stopped, and ShopeeFood as unconfirmed until a marketplace probe or job.
+The service keeps a partial wake lock while the socket is live, holds each
 accepted printer session until the client hangs up, isolates a single
 listen-family failure from a healthy sibling, and retries queued receipts with
-capped exponential backoff. Successful sends keep
-bitmap and OCR for inspection until the cashier taps cleanup. Android 13+
-notification permission is required before intake starts.
+capped exponential backoff. Successful sends keep bitmap and OCR until cleanup.
+Android 13+ notification permission is required before intake starts.
 
 On Xiaomi/Redmi, allow Autostart, set battery policy to No restrictions, and
 enable floating notifications for the `Đơn mới` channel.

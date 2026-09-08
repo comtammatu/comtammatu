@@ -142,7 +142,7 @@ class PrintIntakeService : Service() {
             AgentNotifications.SERVICE_NOTIFICATION_ID,
             AgentNotifications.buildServiceNotification(
                 this,
-                printerStatusText(port)
+                portStatusNotificationText(port)
             )
         )
         startServer(port, lanMode)
@@ -201,7 +201,7 @@ class PrintIntakeService : Service() {
                 AgentNotifications.SERVICE_NOTIFICATION_ID,
                 AgentNotifications.buildServiceNotification(
                     this,
-                    "Không mở được cổng TCP $port; mở Agent để kiểm tra"
+                    portStatusNotificationText(port)
                 )
             )
             return
@@ -224,7 +224,7 @@ class PrintIntakeService : Service() {
             AgentNotifications.SERVICE_NOTIFICATION_ID,
             AgentNotifications.buildServiceNotification(
                 this,
-                printerStatusText(port)
+                portStatusNotificationText(port)
             )
         )
         for (server in bound) {
@@ -495,12 +495,30 @@ class PrintIntakeService : Service() {
         }
     }
 
-    private fun printerStatusText(port: Int): String =
-        if (isServiceRunning) {
-            "Máy in 127.0.0.1:$port đang mở · ${dispatcher.getPendingCount()} đang chờ"
-        } else {
-            "Đang mở máy in 127.0.0.1:$port"
+    private fun portStatusNotificationText(port: Int): String {
+        val status = PrinterPortStatusPolicy.resolve(
+            agentEnabled = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getBoolean(KEY_AGENT_ENABLED, false),
+            serviceRunning = isServiceRunning,
+            listening = PrinterHealth.listening,
+            lastProbeOk = PrinterHealth.lastProbeOk
+        )
+        return when (status) {
+            PrinterPortStatus.OPEN ->
+                getString(R.string.printer_health_live, port)
+            PrinterPortStatus.RECOVERING ->
+                getString(R.string.printer_health_recovering, port)
+            PrinterPortStatus.STOPPED ->
+                getString(R.string.printer_health_down)
         }
+    }
+
+    private fun publishPortNotification(port: Int) {
+        startForeground(
+            AgentNotifications.SERVICE_NOTIFICATION_ID,
+            AgentNotifications.buildServiceNotification(this, portStatusNotificationText(port))
+        )
+    }
 
     private fun startWatchdog() {
         if (watchdogStarted) return
@@ -520,7 +538,8 @@ class PrintIntakeService : Service() {
                         listening = isServiceRunning
                     )
                 ) {
-                    AppLogger.w("CHẠY NỀN", "Máy in 127.0.0.1:${saved.port} không trả lời; đang mở lại")
+                    AppLogger.w("CHẠY NỀN", "Cổng nhận đơn 127.0.0.1:${saved.port} không trả lời; đang mở lại")
+                    publishPortNotification(saved.port)
                     startServer(saved.port, saved.lanMode, force = true)
                 }
             }

@@ -13,7 +13,7 @@ Má Tư Agent biến một máy Android thông thường thành điểm nhận p
 
 ## Chạy nền và cảnh báo đơn mới trên Redmi
 
-Má Tư Agent 1.7.3 dùng foreground service thường trực và tự kiểm tra cổng `9100` mỗi 15 giây. Khi thu ngân đã bấm **Bật nhận đơn**, Agent ghi nhớ trạng thái này và tự mở lại sau khi điện thoại khởi động, APK được cập nhật, hoặc cổng máy in không trả lời. Khi màn hình tắt, Agent giữ tiến trình nhận phiếu hoạt động; nếu một địa chỉ listen lỗi, địa chỉ còn lại vẫn nhận phiếu. Phiên TCP của ShopeeFood được giữ như máy in mạng thật. Thông báo **Má Tư Agent đang nhận đơn** phải luôn có trong vùng thông báo khi dịch vụ đang chạy. Tổng quan hiện dòng **Máy in 127.0.0.1:9100 đang mở**.
+Má Tư Agent 1.7.4 dùng foreground service thường trực và tự kiểm tra cổng `9100` mỗi 15 giây. Kiểm tra `127.0.0.1` chỉ xác nhận cổng đang lắng nghe, không chứng minh ShopeeFood đã kết nối. Tổng quan tách hai dòng: **Cổng nhận đơn đang mở / Đang khôi phục / Đã dừng**, và **Kết nối app sàn** (Chưa xác nhận cho đến khi có hỏi máy in hoặc gửi phiếu). Khi thu ngân đã bấm **Bật nhận đơn**, Agent ghi nhớ trạng thái này và tự mở lại sau khi điện thoại khởi động, APK được cập nhật, hoặc cổng không trả lời. Khi màn hình tắt, Agent giữ tiến trình nhận phiếu; nếu một địa chỉ listen lỗi, địa chỉ còn lại vẫn nhận phiếu. Thông báo thường trực dùng cùng ba trạng thái cổng.
 
 Kênh **Đơn mới** phát âm thanh, rung và thẻ heads-up khi nhận phiếu ShopeeFood hợp lệ. Bấm **Gửi thử cảnh báo nổi** để xác nhận cấu hình mà không tạo đơn POS.
 

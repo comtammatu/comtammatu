@@ -1,6 +1,10 @@
 package com.comtammatu.relay
 
-/** Listen-socket recovery so one failed bind family cannot leave port 9100 down. */
+/**
+ * Listen-socket recovery so one failed bind family cannot leave port 9100 down.
+ * Cashier stop writes KEY_AGENT_ENABLED=false; shouldKeepRebinding then returns
+ * false so the listen loop does not resurrect the port.
+ */
 object IntakeListenPolicy {
     const val REBIND_INITIAL_DELAY_MS = 2_000L
     const val REBIND_MAX_DELAY_MS = 30_000L
