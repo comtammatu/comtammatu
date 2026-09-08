@@ -58,81 +58,16 @@ test("Inventory page does not pass a function across the cockpit client boundary
   );
 });
 
-test("InventoryShiftCockpit adheres to Má Tư Design System Class A Cockpit invariants", () => {
+test("inventory cockpit uses LANDING sections without invented operational metrics", () => {
   const cockpit = read(
     "app/(protected)/inventory/_components/inventory-shift-cockpit.tsx",
   );
-
-  // 1. No raw Card import
+  assert.match(cockpit, /AppSection/);
+  assert.match(cockpit, /ItemGroup/);
   assert.doesNotMatch(
     cockpit,
-    /@comtammatu\/ui\/components\/card/,
-    "InventoryShiftCockpit must not import raw Card component",
+    /KpiCard|Progress|sampleItems|autoDeductionDesc/,
   );
-
-  // 2. Canonical KpiCard for Zone 1 Pulse Strip
-  assert.match(
-    cockpit,
-    /import\s+\{\s*KpiCard\s*\}\s+from\s+["']@\/components\/kpi(?:\/kpi-card)?["']/,
-    "Cockpit must import canonical KpiCard",
-  );
-  const kpiMatches = cockpit.match(/<KpiCard/g);
-  assert.ok(
-    kpiMatches && kpiMatches.length >= 4,
-    "Zone 1 Pulse Strip must feature at least 4 canonical KpiCard instances",
-  );
-
-  // 3. AppSection & Item for container and item lists
-  assert.match(
-    cockpit,
-    /import\s+\{[^}]*AppSection[^}]*\}\s+from\s+["']@\/components\/surface["']/,
-    "Cockpit must import AppSection",
-  );
-  assert.match(
-    cockpit,
-    /import\s+\{[^}]*Item[^}]*\}\s+from\s+["']@comtammatu\/ui\/components\/item["']/,
-    "Cockpit must import Item from @comtammatu/ui/components/item",
-  );
-  assert.match(cockpit, /<ItemGroup/, "Cockpit must render ItemGroup");
-  assert.match(cockpit, /<Item\s/, "Cockpit must render Item");
-
-  // 4. Control surface density (no hardcoded size="touch")
-  assert.doesNotMatch(
-    cockpit,
-    /size="touch"/,
-    "Control surface cockpit must not use size='touch'",
-  );
-
-  // 5. Strict typography (no font-bold)
-  assert.doesNotMatch(
-    cockpit,
-    /font-bold/,
-    "Cockpit must not use font-bold (enforce font-semibold / font-medium)",
-  );
-
-  // 6. Format percentage via SSOT
-  assert.match(
-    cockpit,
-    /formatPercent\(/,
-    "Dynamic percentage values must use formatPercent SSOT",
-  );
-
-  // 7. Zones 2 & 3: Multi-column responsive layout
-  assert.match(
-    cockpit,
-    /lg:col-span-7|lg:col-span-8/,
-    "Zone 2 must be weighted ~60% width on desktop",
-  );
-  assert.match(
-    cockpit,
-    /lg:col-span-5|lg:col-span-4/,
-    "Zone 3 must be weighted ~40% width on desktop",
-  );
-
-  // 8. Zone 4: Realtime POS Consumption & Exception Audit Strip
-  assert.match(
-    cockpit,
-    /NoteCallout/,
-    "Zone 4 must indicate 4-eyes exception reviews with callout",
-  );
+  assert.doesNotMatch(cockpit, /@comtammatu\/ui\/components\/card/);
+  assert.match(cockpit, /ResponsiveActionButton/);
 });

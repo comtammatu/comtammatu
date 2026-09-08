@@ -1,13 +1,16 @@
 import { z } from "zod";
 
 // Quantities use database numeric(15,3) precision and integer arithmetic.
-const quantity = z
+export const inventoryQuantitySchema = z
   .number()
   .finite()
-  .multipleOf(0.001)
   .min(-999999999999.999)
-  .max(999999999999.999);
-const stockQuantity = quantity.nonnegative();
+  .max(999999999999.999)
+  // Round-trip milliunits so large values cannot pass via modulo tolerance.
+  .refine((value) => Math.round(value * 1000) / 1000 === value, {
+    message: "Quantity must use at most three decimal places",
+  });
+const stockQuantity = inventoryQuantitySchema.nonnegative();
 const optionalThreshold = stockQuantity.nullish();
 
 export const stockThresholdInputSchema = z.strictObject({
@@ -78,14 +81,14 @@ export const replenishmentScopeSchema = z.strictObject({
 export const demandAllocationSchema = z.strictObject({
   id: opaqueId,
   scope: replenishmentScopeSchema,
-  quantity: quantity.nonnegative(),
+  quantity: inventoryQuantitySchema.nonnegative(),
   stage: demandAllocationStageSchema,
 });
 
 export const replenishmentDemandSchema = z.strictObject({
   scope: replenishmentScopeSchema,
-  currentQuantity: quantity,
-  targetStockLevel: quantity.nonnegative(),
+  currentQuantity: inventoryQuantitySchema,
+  targetStockLevel: inventoryQuantitySchema.nonnegative(),
   allocations: z.array(demandAllocationSchema),
 });
 

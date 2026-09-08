@@ -65,7 +65,15 @@ test("makeRealtimeCoalescer preserves trailing run while request is in flight", 
   assert.equal(metric?.runCount, 2);
 });
 
-test("makeRealtimeCoalescer caps untrusted trigger bursts by minimum interval", async () => {
+test("makeRealtimeCoalescer caps untrusted trigger bursts by minimum interval", async (context) => {
+  context.mock.timers.enable({ apis: ["setTimeout"] });
+  let now = 0;
+  context.mock.method(performance, "now", () => now);
+  async function advance(ms: number) {
+    now += ms;
+    context.mock.timers.tick(ms);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  }
   resetRealtimeMetrics();
   let runs = 0;
   const schedule = makeRealtimeCoalescer(
@@ -77,16 +85,16 @@ test("makeRealtimeCoalescer caps untrusted trigger bursts by minimum interval", 
   );
 
   schedule();
-  await wait(20);
+  await advance(5);
   assert.equal(runs, 1);
 
   schedule();
   schedule();
   schedule();
-  await wait(30);
+  await advance(79);
   assert.equal(runs, 1);
 
-  await wait(60);
+  await advance(1);
   assert.equal(runs, 2);
   const metric = getRealtimeMetricsSnapshot()["test.rate-limit"];
   assert.equal(metric?.triggerCount, 4);

@@ -1,5 +1,9 @@
 "use server";
 
+import {
+  operationalCount,
+  type OperationalCount,
+} from "@lib/inventory/operational-count";
 import { PERMISSION_KEYS, PROCUREMENT_ROLES } from "@comtammatu/shared/auth";
 import {
   getAuthContextWithAnyPermission,
@@ -10,8 +14,7 @@ import {
 // supplier-invoice lists (with eager joins) only to count a filtered subset and
 // discard the rest. These count-only queries (head: true) return just the
 // number, scoped to tenant + optional branch, matching each list's open filter.
-// On missing permission or error the count is 0, preserving the prior page
-// fallback.
+// Cockpit reads distinguish denied access and unavailable data from an exact zero.
 
 export async function countOpenPurchaseOrders(
   branchId?: number,
@@ -35,17 +38,18 @@ export async function countOpenPurchaseOrders(
 /** Draft GRNs that already have received qty but still miss a booked unit price. */
 export async function countGrnsAwaitingUnitPrice(
   branchId?: number,
-): Promise<number> {
+): Promise<OperationalCount> {
   const ctx = await getAuthContextWithPermission(
     PROCUREMENT_ROLES,
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
-  if (!ctx) return 0;
+  if (!ctx) return { status: "forbidden" };
   const { supabase, claims } = ctx;
   let query = supabase
     .from("grn_items")
     .select(
       "grn_id, unit_cost, unit_cost_unit_id, goods_received_notes!inner(status, branch_id)",
+      { count: "exact" },
     )
     .eq("tenant_id", claims.tenant_id)
     .gt("received_quantity", 0)
@@ -53,28 +57,32 @@ export async function countGrnsAwaitingUnitPrice(
   if (branchId != null) {
     query = query.eq("goods_received_notes.branch_id", branchId);
   }
-  const { data, error } = await query.limit(1000);
-  if (error || data == null) return 0;
+  const { data, count, error } = await query.limit(1000);
+  // Never publish a distinct-document total from a truncated line snapshot.
+  if (error || data == null || count == null || count !== data.length) {
+    return { status: "unavailable" };
+  }
   const awaiting = new Set<number>();
   for (const row of data) {
     if (row.grn_id == null) continue;
-    const unitCost =
-      row.unit_cost == null ? Number.NaN : Number(row.unit_cost);
+    const unitCost = row.unit_cost == null ? Number.NaN : Number(row.unit_cost);
     const hasPrice =
       Number.isFinite(unitCost) &&
       unitCost > 0 &&
       row.unit_cost_unit_id != null;
     if (!hasPrice) awaiting.add(row.grn_id);
   }
-  return awaiting.size;
+  return operationalCount(awaiting.size, null);
 }
 
-export async function countOpenGrns(branchId?: number): Promise<number> {
+export async function countOpenGrns(
+  branchId?: number,
+): Promise<OperationalCount> {
   const ctx = await getAuthContextWithPermission(
     PROCUREMENT_ROLES,
     PERMISSION_KEYS.PROCUREMENT_READ,
   );
-  if (!ctx) return 0;
+  if (!ctx) return { status: "forbidden" };
   const { supabase, claims } = ctx;
   let query = supabase
     .from("goods_received_notes")
@@ -83,7 +91,7 @@ export async function countOpenGrns(branchId?: number): Promise<number> {
     .in("status", ["draft", "pending"]);
   if (branchId != null) query = query.eq("branch_id", branchId);
   const { count, error } = await query;
-  return error ? 0 : (count ?? 0);
+  return operationalCount(count, error);
 }
 
 export async function listOpenGrnsForAttention(
@@ -112,7 +120,10 @@ export async function listOpenGrnsForAttention(
   );
   if (items.length === 0) return { count: 0, items: [] };
   if (items.length === 1) return { count: 1, items };
-  return { count: await countOpenGrns(branchId), items };
+  const total = await countOpenGrns(branchId);
+  if (total.status !== "ready")
+    throw new Error("Inventory attention count unavailable");
+  return { count: total.count, items };
 }
 
 export async function countOpenSupplierInvoices(
@@ -149,12 +160,12 @@ const INVENTORY_ATTENTION_ROLES = [
 /** Writeoff issues awaiting 4-eye approval. */
 export async function countPendingWasteApprovals(
   branchId?: number,
-): Promise<number> {
+): Promise<OperationalCount> {
   const ctx = await getAuthContextWithPermission(
     INVENTORY_ATTENTION_ROLES,
     PERMISSION_KEYS.INVENTORY_WASTE_APPROVE,
   );
-  if (!ctx) return 0;
+  if (!ctx) return { status: "forbidden" };
   const { supabase, claims } = ctx;
   let query = supabase
     .from("stock_issues")
@@ -164,25 +175,22 @@ export async function countPendingWasteApprovals(
     .eq("approval_status", "pending");
   if (branchId != null) query = query.eq("branch_id", branchId);
   const { count, error } = await query;
-  return error ? 0 : (count ?? 0);
+  return operationalCount(count, error);
 }
 
 /** Open stock transfers still moving (not completed / cancelled). */
 export async function countOpenStockTransfers(
   branchId?: number,
-): Promise<number> {
-  const ctx = await getAuthContextWithAnyPermission(
-    INVENTORY_ATTENTION_ROLES,
-    [
-      PERMISSION_KEYS.INVENTORY_REQUEST_FULFILL,
-      PERMISSION_KEYS.INVENTORY_READ,
-    ],
-  );
-  if (!ctx) return 0;
+): Promise<OperationalCount> {
+  const ctx = await getAuthContextWithAnyPermission(INVENTORY_ATTENTION_ROLES, [
+    PERMISSION_KEYS.INVENTORY_REQUEST_FULFILL,
+    PERMISSION_KEYS.INVENTORY_READ,
+  ]);
+  if (!ctx) return { status: "forbidden" };
   const { supabase } = ctx;
   const { data, error } = await supabase.rpc(
     "count_open_stock_transfers",
     branchId != null ? { p_branch_id: branchId } : {},
   );
-  return error ? 0 : Number(data ?? 0);
+  return operationalCount(data, error);
 }

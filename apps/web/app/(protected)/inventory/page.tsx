@@ -1,19 +1,8 @@
-import Link from "next/link";
-import { ArrowRight as IconArrowRight } from "lucide-react";
 import {
   PERMISSION_KEYS,
   canAccess,
   type StaffRole,
 } from "@comtammatu/shared/auth";
-import { formatCount } from "@comtammatu/shared/format";
-import { Badge } from "@comtammatu/ui/components/badge";
-import {
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemGroup,
-  ItemTitle,
-} from "@comtammatu/ui/components/item";
 import {
   AppLinkCard,
   AppPage,
@@ -49,6 +38,10 @@ import {
 } from "./production-data";
 import { withControlSurfaceBranchScope } from "@/lib/control-surface-scope";
 import { messages } from "@lib/messages";
+import {
+  settleOperationalCount,
+  type OperationalCount,
+} from "@lib/inventory/operational-count";
 import { InventoryShiftCockpit } from "./_components/inventory-shift-cockpit";
 
 const INVENTORY_SETTINGS_PERMISSIONS = [
@@ -62,7 +55,8 @@ const copy = messages.inventory.home;
 function getLaneDescription(href: string): string {
   if (href.includes("/stocktake")) return copy.laneDescriptions.stocktake;
   if (href.includes("/stock")) return copy.laneDescriptions.stock;
-  if (href.includes("/purchase-orders")) return copy.laneDescriptions.purchaseOrders;
+  if (href.includes("/purchase-orders"))
+    return copy.laneDescriptions.purchaseOrders;
   if (href.includes("/grn")) return copy.laneDescriptions.receipts;
   if (href.includes("/consumption")) return copy.laneDescriptions.consumption;
   if (href.includes("/transfers")) return copy.laneDescriptions.transfers;
@@ -153,14 +147,6 @@ function scopeHref(href: string, branchId: number | null): string {
   });
 }
 
-async function settledCount(promise: Promise<number>): Promise<number> {
-  try {
-    return await promise;
-  } catch {
-    return 0;
-  }
-}
-
 export default async function InventoryPage({
   searchParams,
 }: {
@@ -176,92 +162,69 @@ export default async function InventoryPage({
       ...flags,
     }),
     branchId,
+    { scopeAll: params.branch === "all" },
   );
 
   const [grnCount, grnPriceCount, wasteCount, transferCount] =
     await Promise.all([
       flags.showProcurement
-        ? settledCount(countOpenGrns(branchId ?? undefined))
-        : Promise.resolve(0),
+        ? settleOperationalCount(() => countOpenGrns(branchId ?? undefined))
+        : Promise.resolve<OperationalCount>({ status: "forbidden" }),
       flags.showProcurement
-        ? settledCount(countGrnsAwaitingUnitPrice(branchId ?? undefined))
-        : Promise.resolve(0),
-      settledCount(countPendingWasteApprovals(branchId ?? undefined)),
+        ? settleOperationalCount(() =>
+            countGrnsAwaitingUnitPrice(branchId ?? undefined),
+          )
+        : Promise.resolve<OperationalCount>({ status: "forbidden" }),
+      settleOperationalCount(() =>
+        countPendingWasteApprovals(branchId ?? undefined),
+      ),
       flags.showStockRequestInbox
-        ? settledCount(countOpenStockTransfers(branchId ?? undefined))
-        : Promise.resolve(0),
+        ? settleOperationalCount(() =>
+            countOpenStockTransfers(branchId ?? undefined),
+          )
+        : Promise.resolve<OperationalCount>({ status: "forbidden" }),
     ]);
 
   const attentionItems = [
-    grnCount > 0
-      ? {
-          id: "grn",
-          label: copy.attentionGrn,
-          count: grnCount,
-          href: scopeHref("/inventory/grn", branchId),
-        }
-      : null,
-    grnPriceCount > 0
-      ? {
-          id: "grn-price",
-          label: copy.attentionGrnPrice,
-          count: grnPriceCount,
-          href: scopeHref("/inventory/grn", branchId),
-        }
-      : null,
-    transferCount > 0
-      ? {
-          id: "transfers",
-          label: copy.attentionTransfers,
-          count: transferCount,
-          href: scopeHref("/inventory/transfers?work=dispatch", branchId),
-        }
-      : null,
-    wasteCount > 0
-      ? {
-          id: "waste",
-          label: copy.attentionWaste,
-          count: wasteCount,
-          href: scopeHref("/inventory/waste/approvals", branchId),
-        }
-      : null,
-  ].filter((item): item is NonNullable<typeof item> => item != null);
+    {
+      id: "grn",
+      label: copy.attentionGrn,
+      result: grnCount,
+      href: scopeHref("/inventory/grn", branchId),
+    },
+    {
+      id: "grn-price",
+      label: copy.attentionGrnPrice,
+      result: grnPriceCount,
+      href: scopeHref("/inventory/grn", branchId),
+    },
+    {
+      id: "transfers",
+      label: copy.attentionTransfers,
+      result: transferCount,
+      href: scopeHref("/inventory/transfers?work=dispatch", branchId),
+    },
+    {
+      id: "waste",
+      label: copy.attentionWaste,
+      result: wasteCount,
+      href: scopeHref("/inventory/waste/approvals", branchId),
+    },
+  ];
 
   return (
     <AppPage density="compact" width="wide">
       <AppPageHeader title={copy.title} />
       <InventoryShiftCockpit
         branchId={branchId}
-        grnCount={grnCount}
-        grnPriceCount={grnPriceCount}
-        wasteCount={wasteCount}
-        transferCount={transferCount}
+        scopeAll={params.branch === "all"}
+        title={copy.attentionTitle}
+        items={attentionItems}
         canAccessProduction={flags.showProduction}
-        canAccessProcurement={flags.showProcurement}
+        canAccessStock={groups.some((group) =>
+          group.items.some((item) => item.href === "/inventory/stock"),
+        )}
       />
-      {attentionItems.length > 0 ? (
-        <AppSection title={copy.attentionTitle} headingLevel="h2">
-          <ItemGroup>
-            {attentionItems.map((item) => (
-              <Item
-                key={item.id}
-                variant="outline"
-                size="sm"
-                role="listitem"
-                render={<Link href={item.href} />}
-              >
-                <ItemContent className="min-w-0">
-                  <ItemTitle className="line-clamp-none">{item.label}</ItemTitle>
-                </ItemContent>
-                <ItemActions className="ml-auto">
-                  <Badge variant="warning">{formatCount(item.count)}</Badge>
-                  <IconArrowRight className="size-4" aria-hidden />
-                </ItemActions>
-              </Item>
-            ))}
-          </ItemGroup>
-        </AppSection>
-      ) : null}
       <div className="grid items-start gap-3">
         {groups.map((group) => {
           const isCatalog = group.title.includes("Danh mục");

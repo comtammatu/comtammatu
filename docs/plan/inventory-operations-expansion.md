@@ -13,7 +13,88 @@ The first Phase 0 slice lives in
 `apps/web/lib/inventory/replenishment-contract.ts`, with executable examples in
 `apps/web/tests/inventory-replenishment-contract.test.ts`. It defines threshold
 resolution and demand projection only; no production loader or mutation uses it
-yet. Database views, RPC enforcement, and their integration proofs remain open.
+yet. The private SQL resolver is prepared in
+`supabase/migrations/20260908074549_effective_stock_threshold_resolver.sql`.
+Its shared SQL/TypeScript examples live in
+`supabase/tests/fixtures/effective_stock_threshold_cases.sql`. On 2026-09-08,
+`supabase/tests/effective_stock_threshold_resolver_test.sql` passed on an
+owner-approved ephemeral Preview: 30 shared cases, 18 native nonfinite inputs,
+trailing-zero acceptance, function attributes, PUBLIC ACL, and actual denied
+calls by anon/authenticated/service_role. The identical harness first failed
+with SQLSTATE 42883 before the helper existed, then returned
+`threshold_sql_assertions_passed` after the migration. Only the known psql
+setting/include were adapted for MCP; the fixture, transaction, and assertions
+were preserved. The large-quantity case `999999999999.0021` also reproduces the
+TypeScript precision boundary: milliunit round-trip validation rejects the
+fourth decimal without silently rounding demand.
+The helper has no direct application-role grants, reads no operational data, and
+does not change existing callers. Database views, authorized RPC enforcement,
+and their integration proofs remain open; the migration is not applied to
+Production and no runtime loader uses the helper.
+
+The rehearsal used an ephemeral, schema-only Preview `dckhofghteosdutcewdo`, parent
+`enloyfnuerqgaqderbwb`, from 06:30:24 to 06:45:01 UTC. Its initial 46 migrations
+matched the active baseline and forwards exactly; the complete guarded dry-run
+listed only `20260908074549_effective_stock_threshold_resolver.sql`, with no
+seeds or roles. The explicit MCP rehearsal recorded that file's SQL under the
+Preview-only version `20260908063754`; this is not the Production migration
+ledger. Supabase confirmed branch deletion, and fresh validated parent-snapshot
+probes verified both branch ID `db2fe9f3-e00f-4816-be3f-9cb0565b7959` and project
+ref absent. The temporary fee-confirmation exception was removed immediately
+after token issuance; no standing confirmation authority remains. Production
+catalog inspection still found zero copies of the new resolver, so the
+repository type source and generated types remain unchanged.
+
+Preview security advisors reported 357 notices on existing objects (one RLS
+information notice, two materialized-view warnings, 25 anon and 329 authenticated
+DEFINER execution warnings), with none naming the new resolver. These notices
+require interpretation against the existing RPC authorization contracts; this
+rehearsal is not a clean-schema security certification. Guidance:
+[Supabase database linter](https://supabase.com/docs/guides/database/database-linter).
+
+The pure split and production-output planners live in
+`apps/web/lib/inventory/fulfillment-contract.ts`, with executable cases in
+`apps/web/tests/inventory-fulfillment-contract.test.ts`. They define reservation
+coverage, batch commitments, exact milliunit apportionment, and surplus handling.
+No runtime loader or mutation consumes these planners yet; they neither reserve
+stock nor create transfers, batches, or allocations.
+Verification of this contract slice passed 55 targeted tests, including 3,888
+small-grid conservation/permutation cases. After the SQL rehearsal and cleanup,
+`corepack pnpm verify` exited 0 on the isolated checkout at `d1638a825` plus the
+cockpit, threshold, fulfillment, and Preview guard changes. All 542 guard
+fixtures ran fresh, including exact cost scope, dry-run flags, ambiguous/default
+deletion IDs, and failed-lookup versus validated-absence diagnostics. Independent
+T3 review passed after the deletion name/ID collision was reproduced RED and
+fixed. Web/shared tests ran fresh: 3,058 and 391 passed, with 10 existing web
+skips. The 35 print tests and unchanged package typecheck/lint/build tasks reused
+caches; operational-tool checks passed. Final guard/rule/runbook sources matched
+the verification checkout. This evidence excludes unrelated shared-workspace
+edits; runtime adoption and Production deployment remain pending.
+
+### Current implementation boundary
+
+- Navigation has the three role-filtered groups and URL branch scope. Categories,
+  units, thresholds, and waste settings exist; readiness remains an ingredient-list
+  filter rather than a dedicated settings route.
+- Ingredient images have the released schema, UI, and cleanup lifecycle described
+  in section 8.4.
+- `/inventory` publishes only permission-checked receipt, missing-price, transfer,
+  and waste-approval counts. An exact zero stays zero; failed, missing, or truncated
+  reads are unavailable, and denied rows are omitted. Recovery reloads the current
+  URL. It does not publish sample stock, batches, shipments, POS deductions, or
+  realtime health claims. Replenishment and daily production summaries remain
+  unavailable with links to their existing workspaces.
+- `production_daily_batches`, `stock_demand_allocations`, allocation locking,
+  payload-hash replay protection, and pro-rata mutation remain unimplemented.
+  Existing individual production runs are not the proposed daily container.
+- Store PO/GRN remains blocked by the central-site contract. Direct store receipt,
+  its cost-free projection, and integration proof are still required before Phase 6.
+- Control Home has Mine, Coordinate, and a Work pulse. The full module pulses and
+  independent regional unavailable/retry states in section 4 remain open.
+
+The cockpit regression suite is `apps/web/tests/inventory-cockpit-data-truth.test.ts`.
+This implementation boundary is not a deployment claim. Sections below retain the
+target workflow; they do not imply that the full blueprint is running.
 
 Every entity and RPC is explicitly classified:
 - `[EXISTS]`: Already present in the active schema or codebase.
@@ -142,6 +223,20 @@ The system resolves effective operational thresholds deterministically, treating
   fallbacks and INV-10 minimum-based PO suggestions keep their current behavior
   until the corresponding runtime contract and migration are revised together.
 
+The current schema has no ingredient-level `target_stock_level` or
+`capacity_limit`, and location minimum/target values are non-null. The existing
+write RPC normalizes null minimum to zero and null target to twice that minimum;
+dropping nullability constraints alone would not implement inheritance. The
+private scalar resolver establishes the target arithmetic without adding an
+incomplete writable schema or adopting the legacy smart-reorder fallback.
+
+Before persisting the new fields, coordinate nullable columns, authorized writes,
+all affected effective overrides, and base-unit rebasing in one contract change.
+The catalog rebase must scale location thresholds and new global target/capacity
+alongside stock quantities. A future replenishment reader needs a coherent,
+authorized location snapshot; absent allocation storage is unavailable coverage,
+not an empty allocation list proving that net deficit equals gross deficit.
+
 ---
 
 ## 3. Synchronized AppShell Sidebar Hierarchy
@@ -255,7 +350,9 @@ One pulse card per authorized module (Inventory, Finance, HR, Sales, Work):
     status: string;
   }; // unit_cost and total amounts are strictly omitted
   ```
-- Verified via automated static and integration tests (`tests/branch-grn-cost-leak-prevention.test.ts`) using branch manager JWTs.
+- Required verification: automated projection and database integration tests using
+  branch manager JWTs must prove that cost fields cannot be read. The proposed
+  `tests/branch-grn-cost-leak-prevention.test.ts` does not exist yet.
 
 ---
 
@@ -331,11 +428,28 @@ When a branch requires 10 units and Central Kitchen has 6 units on hand:
 1. **Automated Split:**
    - 6 units allocated from on-hand $\longrightarrow$ Instant transfer draft (`stage = 'transfer_draft'`).
    - 4 remaining units allocated to production $\longrightarrow$ Daily batch container (`stage = 'in_batch_draft'`).
+   - This example assumes no existing source reservations. The pure contract
+     computes `available = max(0, source_on_hand - reserved_on_hand)`, then
+     `transfer = min(net_deficit, available)` and `production = net_deficit - transfer`.
+     With 6 on hand and 4 already reserved, the split is 2 transfer / 8 production.
+   - `reservedOnHandQuantity` is required and covers only reservations still held
+     against this source location's on-hand. Exclude pre-production commitments
+     and in-transit stock already deducted from source on-hand. Missing stock or
+     reservation coverage cannot become zero. Negative on-hand is valid but
+     provides no transferable stock.
+   - `netDeficit` comes from the coherent demand snapshot before this new
+     reservation. Source and destination require matching tenant, ingredient and
+     base unit, and different locations; same-site warehouse-to-kitchen is valid.
+     Each planned line must fit numeric(15,3); oversized demand fails validation
+     instead of being silently clamped or rounded.
 2. **Atomic Row-Level Locking:**
    - Allocation transactions execute with row locks on source stock:
      ```sql
      SELECT current_quantity FROM public.stock_levels
-     WHERE branch_id = v_source_branch_id AND ingredient_id = v_ingredient_id
+     WHERE tenant_id = v_tenant_id
+       AND branch_id = v_source_branch_id
+       AND location_id = v_source_location_id
+       AND ingredient_id = v_ingredient_id
      FOR UPDATE;
      ```
    - Prevents race conditions and double-allocation between concurrent controllers.
@@ -343,8 +457,26 @@ When a branch requires 10 units and Central Kitchen has 6 units on hand:
 ### 6.4. Under-Yield Governance & Pro-Rata Distribution
 - **Under-Yield Scenario:** Target was 10 units; cooking yielded only 8 units due to kitchen shrinkage.
 - **Hamilton Method (Largest Remainder Pro-Rata):**
-  $$\text{Base Quota} = \left\lfloor \text{Demand}_i \times \frac{\text{Actual Output}}{\text{Total Demand}} \right\rfloor$$
-  Fractional remainders are awarded sequentially to branches with the lowest remaining on-hand stock or highest deficit ratio.
+  The input `requestedQuantity` is each destination's outstanding commitment for
+  the batch being distributed. Do not substitute radar net demand, which already
+  subtracts that same batch allocation. The later RPC must update or replace the
+  existing commitment rather than adding a second coverage record.
+  Convert quantities to integer milliunits, and set distributable output to the
+  smaller of actual output and total outstanding commitments:
+  $$\text{Base Quota}_i = \left\lfloor \frac{\text{Requested Milliunits}_i \times \text{Distributable Milliunits}}{\text{Total Requested Milliunits}} \right\rfloor$$
+  Award residual milliunits by largest fractional remainder first. On an exact
+  remainder tie, prefer lower on-hand after the base quota, then ascending
+  destination branch ID and location ID. IDs only break ties; they never supply
+  missing scope. Return rows in that same canonical ID order, independently of
+  input order. Zero commitments never receive a residual unit.
+- Use BigInt for intermediate products, aggregate commitments and projected
+  stock comparisons. Serialized quantities remain finite numeric(15,3) numbers;
+  no BigInt crosses the application boundary. Reject duplicate destination
+  locations or mixed tenant/ingredient/base-unit scope, including zero-demand rows.
+- Each destination preserves `allocated + unfulfilled = requested`. Across the
+  batch, `sum(allocated) + unallocated = actual_output`; over-yield stays explicit
+  source surplus and never inflates a destination commitment. Empty or all-zero
+  commitments leave the entire output unallocated.
 - The 2 missing units remain on the Deficit Radar for subsequent batching.
 - **Idempotency Verification:** `idempotency_keys` table stores `(idempotency_key, action_name, payload_hash)`. Requests sharing a key but differing in payload hash are rejected with `idempotency_payload_mismatch`.
 

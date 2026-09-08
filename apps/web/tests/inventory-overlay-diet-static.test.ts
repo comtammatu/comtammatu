@@ -76,11 +76,13 @@ test("PO overlay keeps lines first and linked GRNs behind a tab", () => {
 
 test("inventory hub attention is a queue of Items, not Badge chips", () => {
   const hub = read("app/(protected)/inventory/page.tsx");
+  const cockpit = read("app/(protected)/inventory/_components/inventory-shift-cockpit.tsx");
   assert.match(hub, /attentionTitle/);
-  assert.match(hub, /ItemGroup/);
-  assert.match(hub, /formatCount\(item\.count\)/);
+  assert.match(hub, /<InventoryShiftCockpit/);
+  assert.match(cockpit, /ItemGroup/);
+  assert.match(cockpit, /formatCount\(item\.result\.count\)/);
   assert.doesNotMatch(
-    hub,
+    cockpit,
     /variant="warning"[\s\S]*render=\{<Link href=\{item\.href\}/,
   );
   assert.match(hub, /group\.title\.includes\("Danh mục"\)/);

@@ -4,6 +4,7 @@ import {
   calculateReplenishmentDemand,
   demandAllocationStageSchema,
   resolveEffectiveThresholds,
+  stockThresholdInputSchema,
   type ReplenishmentDemandInput,
 } from "../lib/inventory/replenishment-contract.ts";
 
@@ -162,6 +163,48 @@ test("all identity dimensions must match, including location and base unit", () 
     calculateReplenishmentDemand({
       ...demand,
       scope: { ...scope, branchId: 0 },
+    }),
+  );
+});
+
+test("large quantities cannot hide a fourth decimal place", () => {
+  const value = 999999999999.0021;
+  for (const field of [
+    "minStockLevel",
+    "targetStockLevel",
+    "capacityLimit",
+  ] as const) {
+    assert.equal(
+      stockThresholdInputSchema.safeParse({ [field]: value }).success,
+      false,
+    );
+    const invalid = {
+      minStockLevel: 0,
+      targetStockLevel: field === "minStockLevel" ? 999999999999.999 : 0,
+      capacityLimit: 999999999999.999,
+      [field]: value,
+    };
+    assert.throws(() => resolveEffectiveThresholds({}, invalid));
+    assert.throws(() =>
+      resolveEffectiveThresholds(invalid, {
+        minStockLevel: 0,
+        targetStockLevel: 0,
+        capacityLimit: 0,
+      }),
+    );
+  }
+  for (const currentQuantity of [value, -value]) {
+    assert.throws(() =>
+      calculateReplenishmentDemand({ ...demand, currentQuantity }),
+    );
+  }
+  assert.throws(() =>
+    calculateReplenishmentDemand({ ...demand, targetStockLevel: value }),
+  );
+  assert.throws(() =>
+    calculateReplenishmentDemand({
+      ...demand,
+      allocations: [{ id: 971, scope, quantity: value, stage: "in_transit" }],
     }),
   );
 });
