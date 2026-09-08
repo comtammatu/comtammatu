@@ -5,15 +5,6 @@
 > git; deterministic failures live in `tasks/regressions.md`; durable lessons
 > live in `tasks/lessons.md`; stable contracts live in their owning docs.
 
-## Establish SQL parity for replenishment thresholds
-State: doing
-Tier: T3
-Exit: A private scalar SQL resolver matches the TypeScript threshold contract, has no direct API grants, and passes shared numeric/inheritance cases on an approved Preview; existing inventory readers and writers keep their behavior.
-Evidence: Production catalog read confirms global target/capacity fields are absent and location min/target are non-null. Read-only schema/runtime reviews identified legacy fallback divergence and the base-unit rebase dependency. No database mutation has been performed.
-Review: Product — establish the SQL prerequisite for real replenishment reads. Business/data — NULL inherits per field, zero is explicit, min <= target <= capacity, numeric(15,3), invalid inputs fail even when shadowed. Engineering — private immutable invoker helper only; no new writable fields or public RPC. QA/ops — one shared case corpus for TS and SQL, direct-execution denial checks, full verify; rollback drops only the new unused helper. Runtime adoption additionally requires coordinated nullable schema, authorized writes, base-unit rebasing, and snapshot/allocation contracts in `docs/plan/inventory-operations-expansion.md` section 2.3.
-- [ ] Implement and review SQL helper and shared executable cases; run repository verification.
-- [ ] Obtain the organization-specific Preview cost and owner confirmation, replay and test on a verified child of Production, then delete the Preview.
-
 ## Make Inventory cockpit operational counts trustworthy
 State: verify
 Tier: T2
@@ -855,4 +846,16 @@ Evidence: `scripts/check-ui-contract.mjs` owns the frozen `legacy-debt-ratchet` 
 - [ ] Wave 1 — control_surface LIST/DETAIL pages follow `apps/web/app/(protected)/inventory/grn/page.tsx`.
 - [ ] Wave 2 — branch `(operator)` pages follow `apps/web/app/(protected)/br/[branchId]/(operator)/page.tsx`.
 - [ ] Wave 3 — station plane pages follow `apps/web/app/(protected)/br/[branchId]/kds/page.tsx`; spot-check light + dark at the station viewport.
+
+## Expand browser intake for ShopeeFood and beFood
+State: blocked
+Blocker: The beFood merchant URL and verified order payload/integration evidence have not been provided. The available Shopee Partner tab showed menu data, but selecting topping groups returned Network Error and reload redirected to the login screen. Owner reauthentication is required to continue live smoke. Do not invent endpoints, payload fields, or status codes; onboarding contract remains applicable.
+Tier: T3
+Exit: ShopeeFood persists and retries captured complete orders with confirmed POS acknowledgements; beFood has a verified merchant source and payload contract before its adapter is enabled; targeted tests, full verify, and browser evidence pass.
+Evidence: Twelve Shopee capture/worker tests pass: missing identity/incomplete list rejection, retry, concurrent deduplication, full ID separation, scope isolation, restart, ACK validation, target validation, and capacity. The first three capture failures and cross-world script reuse were RED then GREEN. Isolated unpacked MV3 in headless Edge passed MAIN capture -> content message -> persisted worker queue -> HTTP 503 -> retry -> confirmed popup -> duplicate ACK, using branch 73 and a local stub POS with no database. Popup fixture passed 13 checks at 348x660 including empty/error/recovery, branch conflict, safe text, keyboard, overflow, and 44px controls. Final `corepack pnpm verify` exited 0: 3,075 web tests passed, 10 existing skips, 391 shared tests, 13 print-agent tests, extension syntax, and Android operational tests passed. Web typecheck/lint/test ran fresh; unchanged build/package legs reused cache. Test owners: `apps/web/tests/shopee-extension-intake.test.ts` and `apps/web/tests/shopee-extension-queue.test.ts`. Official beMerchant links and Food API catalog do not establish the merchant response contract. No live-platform acceptance, deployment, commit, or push.
+Review: Product — extend the existing internal browser intake. Business/data — explicit configured branch and destination, no acknowledgement until POS returns an order ID, pending rows survive failures, no platform accept/cancel/payment/menu automation. Engineering — own tools/shopeefood-pos-relay-extension and new apps/web/tests/shopee-extension-*.test.ts only; preserve concurrent Inventory/Android work. QA/ops — VM transport fault tests and isolated browser fixture; live platform acceptance remains separate. Rollback reloads the previous extension only after pending rows are reconciled; preserve extension storage.
+UI Advisor Gate: extension popup/badge, plane station_chrome companion, archetype SETTINGS-PANEL, block none (existing standalone MV3 popup with no React runtime), exemplar tools/shopeefood-pos-relay-extension/popup.html. Cashier configures connection and sees pending/confirmed state at the existing 348px popup; keep layout, use text-safe rendering, keyboard labels, and 44px controls.
+- [ ] Obtain the owner's beFood merchant URL and verified integration/payload evidence under docs/runbooks/food-delivery-platform-onboarding.md; implement and test the beFood boundary without guessed endpoints or status codes.
+- [ ] Resume authenticated Playwright smoke at https://partner.shopee.vn/shopee-food/menu for dish and topping availability. On 2026-09-08 the live DOM showed the two listed rice dishes as selling with checked switches; topping selection failed with Network Error, then reload required login. No switch was changed. The empty topping table is failed-load evidence, not proof of zero topping groups. Current extension has no menu write path; item-status maps symbolic SPF_ITEM keys and excludes SPF_MOD options. Verify the actual dish/group/option boundary and a specifically authorized reversible live toggle before claiming menu synchronization support.
+- [ ] Verify a live ShopeeFood order with one intake source per branch; do not run the extension beside the Android Agent.
 
