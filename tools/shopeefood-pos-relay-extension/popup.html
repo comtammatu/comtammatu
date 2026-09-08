@@ -58,6 +58,7 @@
       margin-bottom: 4px;
     }
     input {
+      min-height: 44px;
       width: 100%;
       box-sizing: border-box;
       background: #1e293b;
@@ -67,8 +68,9 @@
       color: #f8fafc;
       font-size: 12px;
     }
-    input:focus {
-      outline: none;
+    input:focus-visible, button:focus-visible {
+      outline: 2px solid #ee4d2d;
+      outline-offset: 2px;
       border-color: #ee4d2d;
     }
     .btn-group {
@@ -78,6 +80,7 @@
       margin-bottom: 12px;
     }
     button {
+      min-height: 44px;
       flex: 1;
       padding: 6px 10px;
       border-radius: 6px;
@@ -155,9 +158,9 @@
   <div class="header">
     <div class="title-wrap">
       <div class="title">ShopeeFood POS Relay</div>
-      <span class="version-badge" id="extVersion">v1.1.0</span>
+      <span class="version-badge" id="extVersion"></span>
     </div>
-    <div class="status" id="statusBadge">🟢 Sẵn Sàng</div>
+    <div class="status" id="statusBadge" role="status">Đang tải</div>
   </div>
 
   <div class="field">
@@ -166,31 +169,29 @@
   </div>
 
   <div class="field">
-    <label for="branchId">Mã Chi Nhánh (Branch ID):</label>
+    <label for="branchId">Mã chi nhánh:</label>
     <input type="number" id="branchId" placeholder="Nhập mã từ URL POS">
   </div>
 
   <div class="field">
-    <label for="relaySecret">Khóa bảo mật (Relay Secret):</label>
+    <label for="relaySecret">Khóa bảo mật:</label>
     <input type="password" id="relaySecret" placeholder="Nhập khóa bảo mật (nếu có)">
   </div>
 
   <div class="btn-group">
-    <button class="btn-primary" id="btnSave">Lưu Cài Đặt</button>
+    <button class="btn-primary" id="btnSave">Lưu cấu hình</button>
     <button class="btn-secondary" id="btnPing">Kiểm tra kết nối</button>
   </div>
 
-  <div style="margin-top: 8px;">
-    <button class="btn-primary" id="btnSyncMenu" style="width: 100%; background: #0284c7; padding: 7px; font-size: 11px;">🔄 Đồng bộ toàn bộ Menu sang Shopee</button>
-  </div>
+  <div id="queueStatus" role="status"></div>
+  <div id="toast" role="status"></div>
 
-  <div id="toast"></div>
-
-  <div class="recent-header">Đơn ShopeeFood Mới Nhận</div>
+  <div class="recent-header">Đơn ShopeeFood đã nhận trên POS</div>
   <div class="order-list" id="orderList">
     <div class="empty-msg">Chưa có đơn hàng nào</div>
   </div>
 
+  <script src="relay-state.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
